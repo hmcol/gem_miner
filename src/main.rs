@@ -1,24 +1,16 @@
 mod block;
-mod world;
-mod gen;
+mod loader;
 mod map;
 mod pos;
-
-mod loader;
-
-
 mod state;
+mod world;
 
 use game_loop::game_loop;
 use loader::Assets;
 use log::error;
 use pixels::{Error, Pixels, SurfaceTexture};
-use state::{State, Command};
-use winit::{
-    event::{Event, VirtualKeyCode, WindowEvent},
-    event_loop::{ControlFlow, EventLoop},
-    window::WindowBuilder,
-};
+use state::{Command, State};
+use winit::{event::VirtualKeyCode, event_loop::EventLoop, window::WindowBuilder};
 use winit_input_helper::WinitInputHelper;
 
 pub const WIDTH: usize = 64;
@@ -49,8 +41,8 @@ fn main() -> Result<(), Error> {
                 surface_texture,
             )?
         },
-        state: State::default(),
-        assets: Assets::default(),
+        state: State::new(),
+        assets: Assets::load(),
     };
 
     game_loop(
@@ -59,9 +51,9 @@ fn main() -> Result<(), Error> {
         game,
         5,
         0.5,
-        |g| g.game.state.update(),
         |g| {
-            g.game.state.draw(g.game.pixels.get_frame(), &g.game.assets);
+            g.game.state.update();
+            println!("update");
             if g.game
                 .pixels
                 .render()
@@ -70,6 +62,10 @@ fn main() -> Result<(), Error> {
             {
                 g.exit();
             }
+        },
+        |g| {
+            // println!("draw");
+            g.game.state.draw(g.game.pixels.get_frame(), &g.game.assets);
         },
         |g, event| {
             if g.game.input.update(event) {
@@ -80,19 +76,19 @@ fn main() -> Result<(), Error> {
                 }
 
                 // input
-                if g.game.input.key_held(VirtualKeyCode::Up) {
+                if g.game.input.key_pressed(VirtualKeyCode::Up) {
                     g.game.state.set_command(Command::Up)
                 }
 
-                if g.game.input.key_held(VirtualKeyCode::Right) {
+                if g.game.input.key_pressed(VirtualKeyCode::Right) {
                     g.game.state.set_command(Command::Right)
                 }
 
-                if g.game.input.key_held(VirtualKeyCode::Down) {
+                if g.game.input.key_pressed(VirtualKeyCode::Down) {
                     g.game.state.set_command(Command::Down)
                 }
 
-                if g.game.input.key_held(VirtualKeyCode::Left) {
+                if g.game.input.key_pressed(VirtualKeyCode::Left) {
                     g.game.state.set_command(Command::Left)
                 }
 

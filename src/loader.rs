@@ -1,11 +1,9 @@
-use std::collections::HashMap;
-
 use crate::{block::Block, TILE_SIZE};
 use image::io::Reader as ImageReader;
 
 pub type Color = [u8; 4];
 
-pub type Tile = [[Color; TILE_SIZE]; TILE_SIZE];
+pub type Tile = [Color; TILE_SIZE * TILE_SIZE];
 
 #[derive(Debug)]
 pub struct Assets {
@@ -16,8 +14,8 @@ pub struct Assets {
     pub miner: Tile,
 }
 
-impl Default for Assets {
-    fn default() -> Self {
+impl Assets {
+    pub fn load() -> Assets {
         Assets {
             air: load_tile("air"),
             dirt: load_tile("dirt"),
@@ -26,9 +24,7 @@ impl Default for Assets {
             miner: load_tile("miner"),
         }
     }
-}
 
-impl Assets {
     pub fn get(&self, block: &Block) -> Tile {
         match block {
             Block::Air => self.air,
@@ -40,18 +36,16 @@ impl Assets {
 }
 
 fn load_tile(filename: &str) -> Tile {
+    let mut tile = [[0; 4]; TILE_SIZE * TILE_SIZE];
+
     let img = ImageReader::open(format!("./assets/{}.png", filename))
         .unwrap()
         .decode()
         .unwrap()
         .into_rgba8();
 
-    let mut tile = Tile::default();
-
-    for y in 0..TILE_SIZE {
-        for x in 0..TILE_SIZE {
-            tile[y][x] = img.get_pixel(x as u32, y as u32).0;
-        }
+    for (s, t) in img.pixels().zip(tile.iter_mut()) {
+        *t = s.0;
     }
 
     tile

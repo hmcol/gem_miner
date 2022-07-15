@@ -14,20 +14,20 @@ pub enum Command {
     Down,
     Left,
 }
-
-impl Default for Command {
-    fn default() -> Self {
-        Command::Idle
-    }
-}
-
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct State {
     world: World,
     command: Command,
 }
 
 impl State {
+    pub fn new() -> State {
+        State {
+            world: World::new(),
+            command: Command::Idle,
+        }
+    }
+
     pub fn set_command(&mut self, cmd: Command) {
         self.command = cmd;
     }
@@ -72,6 +72,7 @@ impl State {
 
         draw_tile(screen, assets.miner, self.world.miner)
     }
+
 }
 
 fn draw_tile(screen: &mut [u8], tile: Tile, pos: Coord) {
@@ -83,7 +84,7 @@ fn draw_tile(screen: &mut [u8], tile: Tile, pos: Coord) {
             let i = x + y * WIDTH * TILE_SIZE;
 
             if let Some(pix) = screen.chunks_exact_mut(4).nth(i) {
-                let color = tile[by][bx];
+                let color = tile[bx + by * TILE_SIZE];
                 if color[3] != 0 {
                     pix.copy_from_slice(&color);
                 }

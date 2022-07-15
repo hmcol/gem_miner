@@ -1,10 +1,10 @@
 use crate::{
-    block::Block,
-    gen,
+    block::{Block, Ore},
     map::Map,
-    pos::{Coord, Direction, NORTH, SOUTH},
-    WIDTH,
+    pos::{coord, Coord, Direction, NORTH, SOUTH},
+    HEIGHT, WIDTH,
 };
+use rand::Rng;
 
 #[derive(Debug)]
 pub struct World {
@@ -13,17 +13,43 @@ pub struct World {
     pub miner: Coord,
 }
 
-impl Default for World {
-    fn default() -> Self {
+impl World {
+    pub fn new() -> World {
+        let mut block = Map::new_with(Block::new_dirt());
+        let mut rng = rand::thread_rng();
+
+        for y in 0..HEIGHT {
+            for x in 0..WIDTH {
+                let pos = Coord::new(x, y);
+                if let Some(b) = block.get_mut(pos) {
+                    if rng.gen_ratio(1, 10) {
+                        *b = Block::new_stone();
+                    }
+
+                    if 2 < y && y < 17 && rng.gen_ratio(1, 10) {
+                        *b = Block::Dirt(Some(Ore::Coal), 5);
+                    }
+                }
+            }
+        }
+
+        for x in 0..WIDTH {
+            block.set(coord(x, 0), Block::Air);
+            block.set(coord(x, HEIGHT - 1), Block::new_stone());
+        }
+
+        for y in 0..HEIGHT {
+            block.set(coord(0, y), Block::new_stone());
+            block.set(coord(WIDTH - 1, y), Block::new_stone());
+        }
+
         World {
-            block: gen::new_map(),
+            block,
             support: Map::new_with(false),
             miner: Coord::new(WIDTH / 2, 0),
         }
     }
-}
 
-impl World {
     pub fn miner_move(&mut self, dir: Direction) -> bool {
         if let Some(new_pos) = self.miner.offset(dir) {
             if matches!(self.block.get(new_pos), Some(Block::Air | Block::Ladder)) {
