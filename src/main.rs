@@ -6,7 +6,6 @@ mod pos;
 
 mod loader;
 
-mod draw;
 
 mod state;
 
