@@ -38,7 +38,7 @@ impl World {
             block.set(coord(x, HEIGHT - 1), Block::new_stone());
         }
 
-        for y in 0..HEIGHT {
+        for y in 1..HEIGHT {
             block.set(coord(0, y), Block::new_stone());
             block.set(coord(WIDTH - 1, y), Block::new_stone());
         }

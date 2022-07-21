@@ -35,6 +35,7 @@ impl State {
     pub fn update(&mut self) {
         if let Some(Block::Air) = self.world.block.get_offset(self.world.miner, SOUTH) {
             self.world.miner_fall();
+            return;
         }
 
         match self.command {
@@ -53,7 +54,7 @@ impl State {
         }
 
         if self.world.miner_dig(dir) {
-            self.world.miner_move(dir);
+            // self.world.miner_move(dir);
             self.command = Command::Idle;
         }
     }
@@ -72,7 +73,6 @@ impl State {
 
         draw_tile(screen, assets.miner, self.world.miner)
     }
-
 }
 
 fn draw_tile(screen: &mut [u8], tile: Tile, pos: Coord) {
