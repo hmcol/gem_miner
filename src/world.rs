@@ -1,8 +1,10 @@
+use std::collections::VecDeque;
+
 use crate::{
     block::{Block, Ore},
     map::Map,
     pos::{coord, Coord, Direction, NORTH, SOUTH},
-    HEIGHT, WIDTH,
+    WORLD_HEIGHT, WORLD_WIDTH,
 };
 use rand::Rng;
 
@@ -18,8 +20,8 @@ impl World {
         let mut block = Map::new_with(Block::new_dirt());
         let mut rng = rand::thread_rng();
 
-        for y in 0..HEIGHT {
-            for x in 0..WIDTH {
+        for y in 0..WORLD_HEIGHT {
+            for x in 0..WORLD_WIDTH {
                 let pos = Coord::new(x, y);
                 if let Some(b) = block.get_mut(pos) {
                     if rng.gen_ratio(1, 10) {
@@ -33,25 +35,25 @@ impl World {
             }
         }
 
-        for x in 0..WIDTH {
+        for x in 0..WORLD_WIDTH {
             block.set(coord(x, 0), Block::Air);
-            block.set(coord(x, HEIGHT - 1), Block::new_stone());
+            block.set(coord(x, WORLD_HEIGHT - 1), Block::new_stone());
         }
 
-        for y in 1..HEIGHT {
+        for y in 1..WORLD_HEIGHT {
             block.set(coord(0, y), Block::new_stone());
-            block.set(coord(WIDTH - 1, y), Block::new_stone());
+            block.set(coord(WORLD_WIDTH - 1, y), Block::new_stone());
         }
 
         World {
             block,
             support: Map::new_with(false),
-            miner: Coord::new(WIDTH / 2, 0),
+            miner: Coord::new(WORLD_WIDTH / 2, 0),
         }
     }
 
     pub fn miner_move(&mut self, dir: Direction) -> bool {
-        if let Some(new_pos) = self.miner.offset(dir) {
+        if let Some(new_pos) = self.miner.offset_dir(dir) {
             if matches!(self.block.get(new_pos), Some(Block::Air | Block::Ladder)) {
                 if dir == NORTH && !matches!(self.block.get(self.miner), Some(Block::Ladder)) {
                     self.place_ladder();
@@ -66,7 +68,7 @@ impl World {
     }
 
     pub fn miner_dig(&mut self, dir: Direction) -> bool {
-        let pos = match self.miner.offset(dir) {
+        let pos = match self.miner.offset_dir(dir) {
             Some(c) => c,
             None => return false,
         };
@@ -87,12 +89,9 @@ impl World {
 
         *block = Block::Air;
 
-        if *self
-            .support
-            .get_offset(pos, NORTH)
-            .or_else(|| self.support.get_offset(pos, SOUTH))
-            .unwrap_or(&false)
-        {
+        if let Some(true) = self.support.get_offset_dir(pos, NORTH) {
+            self.place_support(pos);
+        } else if let Some(true) = self.support.get_offset_dir(pos, SOUTH) {
             self.place_support(pos);
         }
 
@@ -100,7 +99,7 @@ impl World {
     }
 
     pub fn miner_fall(&mut self) -> bool {
-        match self.block.get_offset(self.miner, SOUTH) {
+        match self.block.get_offset_dir(self.miner, SOUTH) {
             Some(Block::Air) => {
                 self.miner.y += 1;
                 true
@@ -113,29 +112,32 @@ impl World {
         self.block.set(self.miner, Block::Ladder)
     }
 
-    fn place_support(&mut self, coord: Coord) -> Option<()> {
-        let mut c = coord;
-        while let Some(Block::Air) = self.block.get(c) {
-            c = c.offset(NORTH)?;
+    pub fn place_support(&mut self, coord: Coord) {
+        let mut queue = VecDeque::new();
 
-            if self.support.get(c).copied().unwrap_or(true) {
-                break;
+        queue.push_back(coord);
+
+        while let Some(c) = queue.pop_front() {
+            if let Some(Block::Air | Block::Ladder) = self.block.get(c) {
+                // place a support at `c`
+                self.support.set(c, true);
+
+                // check if up has support
+                if let Some(up) = c.offset_dir(NORTH) {
+                    if let Some(false) = self.support.get(up) {
+                        // if not, add to queue
+                        queue.push_back(up);
+                    }
+                }
+
+                // check if down has support
+                if let Some(down) = c.offset_dir(SOUTH) {
+                    if let Some(false) = self.support.get(down) {
+                        // if not, add to queue
+                        queue.push_back(down);
+                    }
+                }
             }
-
-            self.support.set(c, true);
         }
-
-        c = coord;
-        while let Some(Block::Air) = self.block.get(c) {
-            c = c.offset(SOUTH)?;
-
-            if self.support.get(c).copied().unwrap_or(true) {
-                break;
-            }
-
-            self.support.set(c, true);
-        }
-
-        Some(())
     }
 }

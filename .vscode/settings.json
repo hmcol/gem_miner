@@ -1,6 +1,11 @@
 {
     "cSpell.words": [
         "crossterm",
-        "diggable"
+        "Deque",
+        "diggable",
+        "ggez",
+        "icoord",
+        "ivdx",
+        "ivdy"
     ]
 }
