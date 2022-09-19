@@ -1,8 +1,10 @@
+use std::time::Duration;
+
 use crate::{
     block::Block, loader::Assets, pos::*, world::World, VIEW_DIST_X, VIEW_DIST_Y, VIEW_HEIGHT,
     VIEW_WIDTH,
 };
-use ggez::graphics::{Canvas, DrawParam};
+use ggez::graphics::{Canvas, DrawParam, Rect, Quad, Color};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Command {
@@ -46,8 +48,10 @@ impl State {
             Command::PlaceSupport => {
                 self.world.place_support(self.world.miner);
                 self.command = Command::Idle;
-            },
+            }
         }
+
+        self.world.gravity_check();
     }
 
     fn try_dir(&mut self, dir: Direction) {
@@ -70,6 +74,13 @@ impl State {
             ),
             None => return,
         } as f32;
+
+        canvas.draw(
+            &Quad,
+            DrawParam::default()
+                .color(Color::from_rgba(0xff, 0xff, 0xff, 0x04))
+                .scale([8.0 * tile_scale * VIEW_WIDTH as f32, 8.0 * tile_scale * VIEW_HEIGHT as f32]),
+        );
 
         let ivdy = VIEW_DIST_Y as isize;
         let ivdx = VIEW_DIST_X as isize;
@@ -104,8 +115,6 @@ impl State {
             tile_draw_param([VIEW_DIST_X as f32, VIEW_DIST_Y as f32], tile_scale),
         );
     }
-
-    
 }
 
 fn tile_draw_param(p: [f32; 2], scale: f32) -> DrawParam {

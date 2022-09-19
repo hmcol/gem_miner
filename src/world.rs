@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::collections::{HashSet, VecDeque};
 
 use crate::{
     block::{Block, Ore},
@@ -13,6 +13,7 @@ pub struct World {
     pub block: Map<Block>,
     pub support: Map<bool>,
     pub miner: Coord,
+    pub gravity_list: Vec<Coord>,
 }
 
 impl World {
@@ -49,17 +50,24 @@ impl World {
             block,
             support: Map::new_with(false),
             miner: Coord::new(WORLD_WIDTH / 2, 0),
+            gravity_list: Vec::new(),
         }
     }
 
     pub fn miner_move(&mut self, dir: Direction) -> bool {
-        if let Some(new_pos) = self.miner.offset_dir(dir) {
-            if matches!(self.block.get(new_pos), Some(Block::Air | Block::Ladder)) {
+        // ensure target is a valid coordinate
+        if let Some(c) = self.miner.offset_dir(dir) {
+            // check if the coordinate contains a block which can be entered
+            if matches!(self.block.get(c), Some(Block::Air | Block::Ladder)) {
+                // special case for moving up
                 if dir == NORTH && !matches!(self.block.get(self.miner), Some(Block::Ladder)) {
+                    // if not in a ladder, try* to place a ladder first
                     self.place_ladder();
                 }
 
-                self.miner = new_pos;
+                // at this point, we are permitted to move the miner
+
+                self.miner = c;
                 return true;
             }
         }
@@ -68,17 +76,21 @@ impl World {
     }
 
     pub fn miner_dig(&mut self, dir: Direction) -> bool {
-        let pos = match self.miner.offset_dir(dir) {
+        // ensure the target is a valid coordinate
+        let c = match self.miner.offset_dir(dir) {
             Some(c) => c,
             None => return false,
         };
 
-        let block = match self.block.get_mut(pos) {
+        // ensure the coordinate is on the map (i.e. contains a block)
+        let block = match self.block.get_mut(c) {
             Some(b) => b,
             None => return false,
         };
 
+        // check if the block is breakable (i.e. dirt)
         if let Block::Dirt(_, dmg) = block {
+            // if the dirt has remaining damage, simply decrement and return
             if *dmg > 0 {
                 *dmg -= 1;
                 return false;
@@ -87,14 +99,24 @@ impl World {
             return false;
         }
 
+        // at this point we are going to break the block
+
+        // set block to air
         *block = Block::Air;
 
-        if let Some(true) = self.support.get_offset_dir(pos, NORTH) {
-            self.place_support(pos);
-        } else if let Some(true) = self.support.get_offset_dir(pos, SOUTH) {
-            self.place_support(pos);
+        // extend any supports above or below into the new air block
+        if let Some(true) = self.support.get_offset_dir(c, NORTH) {
+            self.place_support(c);
+        } else if let Some(true) = self.support.get_offset_dir(c, SOUTH) {
+            self.place_support(c);
         }
 
+        // enqueue block above to be checked for gravity
+        if let Some(up) = c.offset_dir(NORTH) {
+            self.gravity_list.push(up);
+        }
+
+        // done breaking the block
         true
     }
 
@@ -140,4 +162,52 @@ impl World {
             }
         }
     }
+
+    pub fn gravity_check(&mut self) {
+        let mut new_list = Vec::new();
+
+        for & c in &self.gravity_list {
+            if !matches!(self.block.get_offset_dir(c, SOUTH), Some(Block::Air)) {
+                continue;
+            }
+
+            match self.block.get(c) {
+                Some(Block::Ladder) => {
+                    if let Some(down) = c.offset_dir(SOUTH) {
+                        if self.block.set(down, Block::Ladder) {
+                            self.block.set(c, Block::Air);
+                            new_list.push(down);
+    
+                            if let Some(up) = c.offset_dir(NORTH) {
+                                new_list.push(up);
+                            }
+                        }
+                    }
+                }
+                Some(Block::Stone(0)) => {
+                    if let Some(down) = c.offset_dir(SOUTH) {
+                        if self.block.set(down, Block::new_stone()) {
+                            self.block.set(c, Block::Air);
+                            new_list.push(down);
+    
+                            if let Some(up) = c.offset_dir(NORTH) {
+                                new_list.push(up);
+                            }
+                        }
+                    }
+                    
+                }
+                Some(&Block::Stone(timer)) => {
+                    if let Some(false) = self.support.get_offset_dir(c, SOUTH) {
+                        self.block.set(c, Block::Stone(timer - 1));
+                        new_list.push(c);
+                    }
+                }
+                _ => (),
+            }
+        }
+
+        self.gravity_list = new_list;
+    }
+
 }

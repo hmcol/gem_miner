@@ -34,8 +34,6 @@ fn main() {
         .build()
         .expect("could not create ggez context!");
 
-    println!("Full filesystem info: {:#?}", ctx.fs);
-
     let g = GemMinerGame::new(&mut ctx).expect("could not build gem miner game");
 
     event::run(ctx, event_loop, g);
@@ -56,8 +54,11 @@ impl GemMinerGame {
 }
 
 impl EventHandler for GemMinerGame {
-    fn update(&mut self, _ctx: &mut Context) -> GameResult<()> {
-        self.state.update();
+    fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
+
+        while ctx.time.check_update_time(10) {
+            self.state.update();
+        }
 
         Ok(())
     }
@@ -92,21 +93,4 @@ impl EventHandler for GemMinerGame {
 
         Ok(())
     }
-
-    // fn key_down_event(
-    //     &mut self,
-    //     ctx: &mut Context,
-    //     keycode: KeyCode,
-    //     _keymods: event::KeyMods,
-    //     _repeat: bool,
-    // ) {
-    //     match keycode {
-    //         KeyCode::Up => self.state.set_command(Command::Up),
-    //         KeyCode::Right => self.state.set_command(Command::Right),
-    //         KeyCode::Down => self.state.set_command(Command::Down),
-    //         KeyCode::Left => self.state.set_command(Command::Left),
-    //         KeyCode::Escape => event::quit(ctx),
-    //         _ => (),
-    //     }
-    // }
 }

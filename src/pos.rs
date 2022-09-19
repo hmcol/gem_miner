@@ -13,7 +13,7 @@ pub const EAST: Direction = Direction::East;
 pub const SOUTH: Direction = Direction::South;
 pub const WEST: Direction = Direction::West;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Coord {
     pub x: usize,
     pub y: usize,

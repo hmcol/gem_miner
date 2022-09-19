@@ -40,12 +40,24 @@ impl<T> Map<T> {
     }
 
     pub fn set(&mut self, c: Coord, val: T) -> bool {
-        match self.get_mut(c) {
-            Some(e) => {
-                *e = val;
-                true
-            }
-            None => false,
+        if let Some(e) = self.get_mut(c) {
+            *e = val;
+            true
+        } else {
+            false
         }
+    }
+
+    pub fn set_offset(&mut self, c: Coord, ic: ICoord, val: T) -> bool {
+        if let Some(e) = self.get_mut_offset(c, ic) {
+            *e = val;
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn set_offset_dir(&mut self, c: Coord, dir: Direction, val: T) -> bool {
+        self.set_offset(c, dir.into(), val)
     }
 }
